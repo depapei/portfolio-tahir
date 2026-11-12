@@ -189,20 +189,18 @@ function HeroMarquee() {
   const track = [...items, ...items];
 
   return (
-    <div className="overflow-x-clip">
-      <div className="relative z-20 -mx-[5%] w-[110%] overflow-hidden border-y-2 border-border bg-primary py-4 select-none md:-translate-y-4 md:-rotate-2">
-        <div className="animate-marquee flex w-max items-center">
-          {track.map((name, i) => (
-            <span
-              key={`${name}-${i}`}
-              aria-hidden={i >= items.length}
-              className="flex items-center gap-6 pr-6 text-sm font-bold tracking-widest whitespace-nowrap text-white uppercase md:text-base"
-            >
-              {name}
-              <span className="text-white/50">✦</span>
-            </span>
-          ))}
-        </div>
+    <div className="relative z-20 w-full overflow-hidden border-y-2 border-border bg-primary py-4 select-none">
+      <div className="animate-marquee flex w-max items-center">
+        {track.map((name, i) => (
+          <span
+            key={`${name}-${i}`}
+            aria-hidden={i >= items.length}
+            className="flex items-center gap-6 pr-6 text-sm font-bold tracking-widest whitespace-nowrap text-white uppercase md:text-base"
+          >
+            {name}
+            <span className="text-white/50">✦</span>
+          </span>
+        ))}
       </div>
     </div>
   );
