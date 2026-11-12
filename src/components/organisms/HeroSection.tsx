@@ -1,6 +1,7 @@
 "use client";
 
 import { LoadingText } from "@/components/atoms/LoadingText";
+import { DrawnName } from "@/components/molecules/DrawnName";
 import { useExperiences, useProfile, useSkills } from "@/hooks/use-data";
 import { motion } from "framer-motion";
 import {
@@ -99,15 +100,11 @@ export function HeroSection() {
             />
           </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: "easeOut", delay: 0.3 }}
-            className="relative z-20 -mt-[6vw] w-full text-center text-[14vw] leading-[0.85] font-black tracking-tighter text-white uppercase drop-shadow-[0_4px_24px_rgba(0,0,0,0.35)] select-none md:-mt-[3.5vw] md:text-[9vw]"
-          >
-            <span className="block md:inline">{firstName}</span>{" "}
-            <span className="block md:inline">{lastName}</span>
-          </motion.h1>
+          <DrawnName
+            firstName={firstName}
+            lastName={lastName}
+            className="relative z-20 -mt-[6vw] w-full text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.35)] select-none md:-mt-[3.5vw]"
+          />
         </div>
 
         {/* Corner details */}
