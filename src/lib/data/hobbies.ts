@@ -1,29 +1,23 @@
 import { Hobby } from "@/types";
 
-// TODO: Ganti dengan hobi asli Tahir (CV tidak mencantumkan hobi).
-// Simpan gambar di public/images/hobbies/ lalu isi `images` dengan path-nya,
-// misal "/images/hobbies/photography-1.webp". Gambar pertama dipakai sebagai
-// cover di grid. Kalau `images` kosong, otomatis pakai gambar placeholder.
+// Gambar disimpan di public/images/hobbies/<hobi>/. Gambar pertama dipakai
+// sebagai cover di carousel. Kalau `images` kosong, otomatis pakai placeholder.
 export const hobbiesData: Hobby[] = [
   {
-    id: "photography",
-    title: "Photography",
+    id: "motorcycle",
+    title: "Motorcycle Riding",
     description:
-      "Capturing everyday moments, street scenes, and landscapes. Photography trains me to notice details and compose a clear story, the same mindset I bring to presenting data.",
-    images: [],
+      "Riding my sport bike and joining group rides with fellow riders. Being on the road helps me clear my head, and riding in a convoy teaches discipline, awareness, and trust in the people around you.",
+    images: ["/images/hobbies/bike/1.webp"],
   },
   {
-    id: "badminton",
-    title: "Badminton",
+    id: "mini-soccer",
+    title: "Mini Soccer",
     description:
-      "Playing badminton with friends on weekends to stay active, sharpen focus, and enjoy some friendly competition.",
-    images: [],
-  },
-  {
-    id: "reading",
-    title: "Reading",
-    description:
-      "Reading books on business, technology, and self-development to keep learning beyond work and broaden my perspective.",
-    images: [],
+      "Playing mini soccer with friends and colleagues to stay active and build team spirit. Every match is a reminder that good communication and teamwork matter on the field as much as they do at work.",
+    images: [
+      "/images/hobbies/minisoccer/1.webp",
+      "/images/hobbies/minisoccer/2.webp",
+    ],
   },
 ];
