@@ -3,10 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import * as THREE from "three";
-import {
-  Lensflare,
-  LensflareElement,
-} from "three/examples/jsm/objects/Lensflare.js";
+import { markPreloaderDone } from "@/lib/preloader-signal";
 
 const DURATION_MS = 3_000; // durasi loading
 const WORDINGS = [
@@ -151,14 +148,13 @@ function SolarScene() {
     mount.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
-    const LOOK_Y = -0.3;
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000);
 
     // --- Bintang ---
     const STAR_COUNT = 2200;
     const positions = new Float32Array(STAR_COUNT * 3);
     for (let i = 0; i < STAR_COUNT; i++) {
-      const r = 150 + Math.random() * 100;
+      const r = 300 + Math.random() * 200;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
       positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
@@ -172,7 +168,7 @@ function SolarScene() {
       track(
         new THREE.PointsMaterial({
           color: 0xffffff,
-          size: 0.7,
+          size: 1.3,
           sizeAttenuation: true,
           transparent: true,
           opacity: 0.85,
@@ -181,48 +177,114 @@ function SolarScene() {
     );
     scene.add(stars);
 
-    // --- Matahari (jauh, kiri atas) ---
-    const sun = new THREE.Group();
-    scene.add(sun);
-    sun.add(
+    // --- Matahari di pusat ---
+    scene.add(
       new THREE.Mesh(
-        track(new THREE.SphereGeometry(2.2, 32, 32)),
-        track(new THREE.MeshBasicMaterial({ color: 0xfff4d6 })),
+        track(new THREE.SphereGeometry(1.1, 48, 48)),
+        track(new THREE.MeshBasicMaterial({ color: 0xfff1c9 })),
       ),
     );
     const sunGlow = new THREE.Sprite(
       track(
         new THREE.SpriteMaterial({
-          map: track(glowTexture("rgba(255,240,200,1)", "rgba(255,170,60,0.35)")),
+          map: track(glowTexture("rgba(255,240,200,1)", "rgba(255,160,50,0.4)")),
           blending: THREE.AdditiveBlending,
           depthWrite: false,
           transparent: true,
         }),
       ),
     );
-    sunGlow.scale.set(22, 22, 1);
-    sun.add(sunGlow);
+    sunGlow.scale.set(7, 7, 1);
+    scene.add(sunGlow);
 
-    const flareMain = track(glowTexture("rgba(255,255,255,1)", "rgba(255,200,120,0.4)"));
-    const flareRing = track(glowTexture("rgba(255,220,180,0.5)", "rgba(120,160,255,0.15)"));
-    const lensflare = new Lensflare();
-    lensflare.addElement(new LensflareElement(flareMain, 380, 0, new THREE.Color(0xffe6b0)));
-    lensflare.addElement(new LensflareElement(flareRing, 60, 0.6));
-    lensflare.addElement(new LensflareElement(flareRing, 90, 0.75));
-    lensflare.addElement(new LensflareElement(flareRing, 40, 0.9));
-    sun.add(lensflare);
+    // Cahaya memancar dari matahari ke segala arah
+    scene.add(new THREE.PointLight(0xfff1dc, 3.2, 0, 0));
+    scene.add(new THREE.AmbientLight(0x6688cc, 0.08));
 
-    // Cahaya matahari + sedikit cahaya ambient supaya sisi malam tidak hitam total
-    const sunLight = new THREE.DirectionalLight(0xfff1dc, 2.6);
-    scene.add(sunLight);
-    scene.add(new THREE.AmbientLight(0x6688cc, 0.12));
-    const sunDir = new THREE.Vector3();
+    // --- Planet & orbit ---
+    type Planet = {
+      pivot: THREE.Group; // berputar mengelilingi matahari
+      body: THREE.Object3D; // berputar pada porosnya
+      orbitSpeed: number;
+      spin: number;
+    };
+    const planets: Planet[] = [];
+    let maxOrbit = 0;
 
-    // --- Bumi (sumbu miring 23.4°) ---
-    const earthTilt = new THREE.Group();
-    earthTilt.rotation.z = THREE.MathUtils.degToRad(23.4);
-    scene.add(earthTilt);
+    const addOrbitLine = (radius: number) => {
+      const pts: THREE.Vector3[] = [];
+      for (let i = 0; i <= 128; i++) {
+        const a = (i / 128) * Math.PI * 2;
+        pts.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
+      }
+      scene.add(
+        new THREE.Line(
+          track(new THREE.BufferGeometry().setFromPoints(pts)),
+          track(
+            new THREE.LineBasicMaterial({
+              color: 0xffffff,
+              transparent: true,
+              opacity: 0.12,
+            }),
+          ),
+        ),
+      );
+    };
 
+    const addPlanet = (opts: {
+      orbit: number;
+      radius: number;
+      material: THREE.Material;
+      orbitSpeed: number;
+      spin?: number;
+      tilt?: number;
+      extra?: (holder: THREE.Group) => void;
+    }) => {
+      addOrbitLine(opts.orbit);
+      maxOrbit = Math.max(maxOrbit, opts.orbit + opts.radius);
+
+      const pivot = new THREE.Group();
+      pivot.rotation.y = Math.random() * Math.PI * 2; // posisi awal acak
+      scene.add(pivot);
+
+      const holder = new THREE.Group(); // kemiringan sumbu
+      holder.position.x = opts.orbit;
+      holder.rotation.z = THREE.MathUtils.degToRad(opts.tilt ?? 0);
+      pivot.add(holder);
+
+      const body = new THREE.Mesh(
+        track(new THREE.SphereGeometry(opts.radius, 48, 48)),
+        track(opts.material),
+      );
+      holder.add(body);
+      opts.extra?.(holder);
+
+      planets.push({
+        pivot,
+        body,
+        orbitSpeed: opts.orbitSpeed,
+        spin: opts.spin ?? 0.01,
+      });
+    };
+
+    const phong = (map: THREE.Texture, shininess = 6) =>
+      new THREE.MeshPhongMaterial({ map: track(map), shininess });
+
+    // Merkurius, Venus
+    addPlanet({
+      orbit: 2.0,
+      radius: 0.11,
+      material: phong(spottedTexture("#8c8279", "#4f4842", 220, 8)),
+      orbitSpeed: 0.02,
+    });
+    addPlanet({
+      orbit: 2.8,
+      radius: 0.19,
+      material: phong(bandedTexture(["#e6cf9a", "#d9bd83", "#efdcb0"], 0.04)),
+      orbitSpeed: 0.0145,
+    });
+
+    // Bumi: tekstur NASA + kilau laut + atmosfer + bulan
     const earthMat = track(
       new THREE.MeshPhongMaterial({
         shininess: 55,
@@ -240,28 +302,28 @@ function SolarScene() {
     earthTex.colorSpace = THREE.SRGBColorSpace;
     earthTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
     earthMat.map = earthTex;
-    const earth = new THREE.Mesh(track(new THREE.SphereGeometry(1, 96, 96)), earthMat);
-    earthTilt.add(earth);
 
-    // Atmosfer: lebih terang di sisi yang menghadap matahari
+    const EARTH_R = 0.22;
     const atmoMat = track(
       new THREE.ShaderMaterial({
-        uniforms: { sunDir: { value: sunDir } },
         vertexShader: `
           varying vec3 vNormal;
           varying vec3 vWorldNormal;
+          varying vec3 vWorldPos;
           void main() {
             vNormal = normalize(normalMatrix * normal);
             vWorldNormal = normalize(mat3(modelMatrix) * normal);
+            vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
           }`,
         fragmentShader: `
-          uniform vec3 sunDir;
           varying vec3 vNormal;
           varying vec3 vWorldNormal;
+          varying vec3 vWorldPos;
           void main() {
+            vec3 sunDir = normalize(-vWorldPos); // matahari di titik pusat
             float rim = pow(0.68 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
-            float lit = 0.35 + 0.65 * max(dot(vWorldNormal, sunDir), 0.0);
+            float lit = 0.25 + 0.75 * max(dot(vWorldNormal, sunDir), 0.0);
             gl_FragColor = vec4(0.32, 0.62, 1.0, 1.0) * rim * lit * 1.4;
           }`,
         blending: THREE.AdditiveBlending,
@@ -270,14 +332,9 @@ function SolarScene() {
         depthWrite: false,
       }),
     );
-    scene.add(new THREE.Mesh(track(new THREE.SphereGeometry(1.13, 64, 64)), atmoMat));
-
-    // --- Bulan mengorbit bumi ---
     const moonOrbit = new THREE.Group();
-    moonOrbit.rotation.x = THREE.MathUtils.degToRad(12);
-    scene.add(moonOrbit);
     const moon = new THREE.Mesh(
-      track(new THREE.SphereGeometry(0.16, 32, 32)),
+      track(new THREE.SphereGeometry(0.06, 24, 24)),
       track(
         new THREE.MeshPhongMaterial({
           map: track(spottedTexture("#a3a3a3", "#5c5c5c", 260, 6)),
@@ -285,61 +342,58 @@ function SolarScene() {
         }),
       ),
     );
-    moon.position.set(2.15, 0, 0);
+    moon.position.x = 0.42;
     moonOrbit.add(moon);
 
-    // --- Planet lain di kejauhan ---
-    type Planet = {
-      group: THREE.Group;
-      body: THREE.Mesh;
-      fx: number; // posisi relatif terhadap lebar layar (-1..1)
-      fy: number; // posisi relatif terhadap tinggi layar (-1..1)
-      z: number;
-      spin: number;
-    };
-    const planets: Planet[] = [];
-    const addPlanet = (
-      radius: number,
-      map: THREE.Texture,
-      fx: number,
-      fy: number,
-      z: number,
-      spin: number,
-      extra?: (g: THREE.Group) => void,
-    ) => {
-      const group = new THREE.Group();
-      const body = new THREE.Mesh(
-        track(new THREE.SphereGeometry(radius, 48, 48)),
-        track(new THREE.MeshPhongMaterial({ map: track(map), shininess: 6 })),
-      );
-      group.add(body);
-      extra?.(group);
-      scene.add(group);
-      planets.push({ group, body, fx, fy, z, spin });
-    };
+    addPlanet({
+      orbit: 3.7,
+      radius: EARTH_R,
+      material: earthMat,
+      orbitSpeed: 0.011,
+      spin: 0.03,
+      tilt: 23.4,
+      extra: (holder) => {
+        holder.add(
+          new THREE.Mesh(track(new THREE.SphereGeometry(EARTH_R * 1.13, 48, 48)), atmoMat),
+        );
+        // Orbit bulan tidak ikut miring bersama sumbu bumi
+        const level = new THREE.Group();
+        level.rotation.z = -THREE.MathUtils.degToRad(23.4);
+        level.add(moonOrbit);
+        holder.add(level);
+      },
+    });
 
     // Mars
-    addPlanet(0.34, spottedTexture("#b5532e", "#5e2412", 220), 0.66, -0.4, -12, 0.004);
+    addPlanet({
+      orbit: 4.6,
+      radius: 0.15,
+      material: phong(spottedTexture("#b5532e", "#5e2412", 220)),
+      orbitSpeed: 0.009,
+      tilt: 25,
+    });
     // Jupiter
-    addPlanet(
-      1.5,
-      bandedTexture(["#d8b48a", "#c48a5a", "#e9d6b8", "#a9714a", "#f1e3c8"]),
-      0.74,
-      0.5,
-      -34,
-      0.008,
-    );
+    addPlanet({
+      orbit: 6.2,
+      radius: 0.52,
+      material: phong(
+        bandedTexture(["#d8b48a", "#c48a5a", "#e9d6b8", "#a9714a", "#f1e3c8"]),
+      ),
+      orbitSpeed: 0.005,
+      spin: 0.02,
+      tilt: 3,
+    });
     // Saturnus + cincin
-    addPlanet(
-      0.9,
-      bandedTexture(["#e3cf9d", "#d4b97c", "#efe0b6", "#c8ab6c"], 0.05),
-      -0.66,
-      -0.46,
-      -24,
-      0.007,
-      (g) => {
+    addPlanet({
+      orbit: 7.8,
+      radius: 0.43,
+      material: phong(bandedTexture(["#e3cf9d", "#d4b97c", "#efe0b6", "#c8ab6c"], 0.05)),
+      orbitSpeed: 0.0037,
+      spin: 0.018,
+      tilt: 27,
+      extra: (holder) => {
         const ring = new THREE.Mesh(
-          track(new THREE.RingGeometry(1.25, 2.1, 96)),
+          track(new THREE.RingGeometry(0.6, 1.0, 96)),
           track(
             new THREE.MeshBasicMaterial({
               map: track(ringTexture()),
@@ -349,63 +403,59 @@ function SolarScene() {
             }),
           ),
         );
-        ring.rotation.x = THREE.MathUtils.degToRad(62);
-        ring.rotation.y = THREE.MathUtils.degToRad(-18);
-        g.add(ring);
+        ring.rotation.x = -Math.PI / 2; // sejajar ekuator planet
+        holder.add(ring);
       },
-    );
-    // Neptunus (sangat jauh)
-    addPlanet(
-      0.9,
-      bandedTexture(["#3d64c9", "#4f78db", "#2f52ad", "#6a8fe6"], 0.04),
-      0.32,
-      0.84,
-      -60,
-      0.006,
-    );
+    });
+    // Uranus, Neptunus
+    addPlanet({
+      orbit: 9.1,
+      radius: 0.3,
+      material: phong(bandedTexture(["#9fdde3", "#8fd0d8", "#b4e8ec"], 0.03)),
+      orbitSpeed: 0.0026,
+      tilt: 82,
+    });
+    addPlanet({
+      orbit: 10.3,
+      radius: 0.29,
+      material: phong(bandedTexture(["#3d64c9", "#4f78db", "#2f52ad", "#6a8fe6"], 0.04)),
+      orbitSpeed: 0.002,
+      tilt: 28,
+    });
 
-    // --- Tata letak responsif ---
-    const viewAt = (z: number) => {
-      const d = camera.position.z - z;
-      const hh = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * d;
-      return { hw: hh * camera.aspect, hh };
-    };
+    // --- Kamera: melihat tata surya dari atas, agak miring ---
+    const ELEVATION = THREE.MathUtils.degToRad(26);
+    const TARGET = new THREE.Vector3(0, -0.9, 0); // geser sedikit ke atas layar
+    const SCREEN_FILL = 0.7; // lebar orbit terluar ~70% lebar layar
 
     const resize = () => {
       const w = mount.clientWidth;
       const h = mount.clientHeight;
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
-      const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
-      const fitHeight = 1.9 / Math.tan(halfFov); // diameter bumi ~52% tinggi layar
-      const fitWidth = 1.6 / (Math.tan(halfFov) * camera.aspect);
-      camera.position.set(0, LOOK_Y, Math.max(fitHeight, fitWidth));
-      camera.lookAt(0, LOOK_Y, 0);
+      const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+      const fitWidth = maxOrbit / (SCREEN_FILL * t * camera.aspect);
+      const fitHeight = (maxOrbit * Math.sin(ELEVATION)) / (0.42 * t);
+      const d = Math.max(fitWidth, fitHeight);
+      camera.position.set(
+        TARGET.x,
+        TARGET.y + d * Math.sin(ELEVATION),
+        TARGET.z + d * Math.cos(ELEVATION),
+      );
+      camera.lookAt(TARGET);
       camera.updateProjectionMatrix();
-
-      // Matahari di kiri atas, jauh di belakang
-      const SUN_Z = -80;
-      const s = viewAt(SUN_Z);
-      sun.position.set(-0.72 * s.hw, LOOK_Y + 0.62 * s.hh, SUN_Z);
-      // Arah cahaya: dari arah matahari, sedikit ke depan supaya bumi tetap terlihat
-      sunLight.position.set(sun.position.x, sun.position.y, Math.abs(SUN_Z) * 0.45);
-      sunDir.copy(sunLight.position).normalize();
-
-      for (const p of planets) {
-        const v = viewAt(p.z);
-        p.group.position.set(p.fx * v.hw, LOOK_Y + p.fy * v.hh, p.z);
-      }
     };
     resize();
     window.addEventListener("resize", resize);
 
     let frame = 0;
     const animate = () => {
-      earth.rotation.y += 0.006;
-      moonOrbit.rotation.y += 0.01;
-      moon.rotation.y += 0.01;
-      for (const p of planets) p.body.rotation.y += p.spin;
-      stars.rotation.y += 0.0003;
+      for (const p of planets) {
+        p.pivot.rotation.y += p.orbitSpeed;
+        p.body.rotation.y += p.spin;
+      }
+      moonOrbit.rotation.y += 0.05;
+      stars.rotation.y += 0.0002;
       renderer.render(scene, camera);
       frame = requestAnimationFrame(animate);
     };
@@ -414,7 +464,6 @@ function SolarScene() {
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
-      lensflare.dispose();
       disposables.forEach((o) => o.dispose());
       renderer.dispose();
       mount.removeChild(renderer.domElement);
@@ -457,7 +506,7 @@ export function Preloader({ loading }: PreloaderProps) {
   }, [visible]);
 
   return (
-    <AnimatePresence>
+    <AnimatePresence onExitComplete={markPreloaderDone}>
       {visible && (
         <motion.div
           key="preloader"
