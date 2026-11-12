@@ -39,7 +39,8 @@ export function ThemeToggle() {
     // Swap the theme while the loading screen covers the page
     timers.current.push(
       setTimeout(() => setTheme(isDark ? "light" : "dark"), 300),
-      setTimeout(() => setSwitching(false), 800),
+      // 300ms fade-in + 600ms color crossfade + short hold
+      setTimeout(() => setSwitching(false), 1100),
     );
   };
 
@@ -59,13 +60,13 @@ export function ThemeToggle() {
           {switching && (
             <motion.div
               key="theme-loader"
-              className="fixed inset-0 z-[10000] flex items-center justify-center bg-background"
+              className="fixed inset-0 z-[10000] flex items-center justify-center bg-background transition-colors duration-600 ease-in-out"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
             >
-              <LoadingText className="text-sm text-foreground" />
+              <LoadingText className="text-sm text-foreground transition-colors duration-600 ease-in-out" />
             </motion.div>
           )}
         </AnimatePresence>,

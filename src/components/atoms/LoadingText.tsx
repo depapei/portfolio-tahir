@@ -7,6 +7,7 @@ export function LoadingText({ className }: { className?: string }) {
       aria-live="polite"
       className={cn(
         "text-xs font-bold tracking-widest text-muted-foreground uppercase",
+        "animate-pulse",
         className,
       )}
     >
