@@ -311,3 +311,112 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee { animation: none; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Transisi ganti tema: matahari/bulan terbit & terbenam               */
+/* Hanya transform + opacity supaya jalan di GPU dan tetap mulus       */
+/* walau halaman sedang di-render ulang ke tema baru.                  */
+/* Total 1.7s — samakan dengan TOTAL_MS di ThemeToggle.tsx.           */
+/* ------------------------------------------------------------------ */
+.tt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  overflow: hidden;
+  pointer-events: all;
+  animation: tt-overlay 1.7s cubic-bezier(0.45, 0, 0.55, 1) both;
+  will-change: opacity;
+}
+@keyframes tt-overlay {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.tt-bg {
+  position: absolute;
+  inset: 0;
+}
+.tt-bg-to {
+  opacity: 0;
+  animation: tt-bg-in 0.9s cubic-bezier(0.65, 0, 0.35, 1) 0.25s forwards;
+  will-change: opacity;
+}
+@keyframes tt-bg-in {
+  to { opacity: 1; }
+}
+.tt-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Pivot jauh di bawah layar -> benda langit bergerak melengkung */
+.tt-orbit {
+  position: absolute;
+  transform-origin: 50% 340%;
+  will-change: transform, opacity;
+}
+.tt-out {
+  animation: tt-set 0.95s cubic-bezier(0.65, 0, 0.35, 1) 0.25s both;
+}
+.tt-in {
+  animation: tt-rise 0.95s cubic-bezier(0.65, 0, 0.35, 1) 0.25s both;
+}
+@keyframes tt-set {
+  0% { transform: rotate(0deg); opacity: 1; }
+  55% { opacity: 1; }
+  100% { transform: rotate(50deg); opacity: 0; }
+}
+@keyframes tt-rise {
+  0% { transform: rotate(-50deg); opacity: 0; }
+  45% { opacity: 1; }
+  100% { transform: rotate(0deg); opacity: 1; }
+}
+.tt-body {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 9999px;
+}
+/* Matahari */
+.tt-sun-core {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 35%, #fff8cf 0%, #ffd23f 55%, #ffad0a 100%);
+  box-shadow:
+    0 0 40px 12px rgba(255, 196, 60, 0.55),
+    0 0 120px 40px rgba(255, 170, 40, 0.25);
+}
+.tt-sun-rays {
+  position: absolute;
+  inset: -38px;
+  border-radius: 9999px;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 200, 70, 0.55) 0deg 6deg,
+    transparent 6deg 30deg
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 58%, #000 60%, transparent 72%);
+  mask-image: radial-gradient(circle, transparent 58%, #000 60%, transparent 72%);
+  animation: tt-spin 8s linear infinite;
+  will-change: transform;
+}
+@keyframes tt-spin {
+  to { transform: rotate(360deg); }
+}
+/* Bulan */
+.tt-moon {
+  background: radial-gradient(circle at 35% 35%, #f6f4ec 0%, #d6d1c4 65%, #b3ad9f 100%);
+  box-shadow:
+    0 0 40px 10px rgba(210, 220, 255, 0.28),
+    inset -14px -10px 24px rgba(0, 0, 0, 0.18);
+}
+.tt-crater {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(120, 112, 98, 0.35);
+  box-shadow: inset 2px 2px 3px rgba(0, 0, 0, 0.18);
+}
