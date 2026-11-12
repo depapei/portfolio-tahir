@@ -110,12 +110,13 @@ export function DrawnName({ firstName, lastName, className }: DrawnNameProps) {
   const [instant, setInstant] = useState(false);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setInstant(true);
-      setPlay(true);
-      return;
-    }
-    const start = () => requestAnimationFrame(() => setPlay(true));
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Lewatkan ke frame berikutnya supaya tidak setState sinkron di dalam effect
+    const start = () =>
+      requestAnimationFrame(() => {
+        setInstant(reduced);
+        setPlay(true);
+      });
     const off = onPreloaderDone(start);
     const fallback = setTimeout(start, FALLBACK_MS);
     return () => {
