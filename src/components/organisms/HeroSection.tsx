@@ -89,12 +89,12 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: "easeOut", delay: 0.15 }}
-            className="relative z-10 aspect-[4/5] h-[34vh] overflow-hidden border-4 border-white shadow-2xl sm:h-[42vh] lg:h-[50vh]"
+            className="relative z-10 h-[40vh] sm:h-[48vh] lg:h-[56vh]"
           >
             <img
               src={profile.avatar}
               alt={profile.name}
-              className="h-full w-full object-cover object-top"
+              className="h-full w-auto object-contain drop-shadow-[0_12px_32px_rgba(0,0,0,0.35)]"
               fetchPriority="high"
             />
           </motion.div>
