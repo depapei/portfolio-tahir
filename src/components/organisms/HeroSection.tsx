@@ -2,6 +2,7 @@
 
 import { LoadingText } from "@/components/atoms/LoadingText";
 import { DrawnName } from "@/components/molecules/DrawnName";
+import { StarField } from "@/components/molecules/StarField";
 import { useExperiences, useProfile, useSkills } from "@/hooks/use-data";
 import { motion } from "framer-motion";
 import {
@@ -38,6 +39,10 @@ export const iconMap: Record<string, React.ReactNode> = {
   whatsapp: <MessageCircle size={22} />,
 };
 
+/** Latar luar angkasa gelap + kabut nebula tipis di belakang bintang. */
+const spaceBackground =
+  "bg-[#03040c] bg-[radial-gradient(ellipse_at_20%_25%,rgba(76,61,173,0.28),transparent_55%),radial-gradient(ellipse_at_80%_70%,rgba(33,49,131,0.38),transparent_60%),radial-gradient(ellipse_at_50%_120%,rgba(98,174,240,0.16),transparent_55%)]";
+
 const pillClass =
   "rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold tracking-wider text-white uppercase backdrop-blur-md sm:px-5 sm:py-2 sm:text-sm";
 
@@ -49,7 +54,7 @@ export function HeroSection() {
     return (
       <section
         id="hero"
-        className="flex h-[100svh] items-center justify-center bg-[var(--hero-band)]"
+        className={`flex h-[100svh] items-center justify-center ${spaceBackground}`}
       >
         <LoadingText className="text-white/70" />
       </section>
@@ -69,8 +74,11 @@ export function HeroSection() {
     <>
       <section
         id="hero"
-        className="relative flex h-[100svh] min-h-[640px] w-full items-center justify-center overflow-hidden bg-[var(--hero-band)] text-white"
+        className={`relative flex h-[100svh] min-h-[640px] w-full cursor-grab touch-pan-y items-center justify-center overflow-hidden text-white select-none ${spaceBackground}`}
       >
+        {/* 3D starfield — geser untuk memutar */}
+        <StarField className="z-0" />
+
         {/* Square behind the portrait */}
         {/* <div
           aria-hidden
@@ -95,6 +103,7 @@ export function HeroSection() {
             <img
               src={profile.avatar}
               alt={profile.name}
+              draggable={false}
               className="h-full w-auto object-contain drop-shadow-[0_12px_32px_rgba(0,0,0,0.35)]"
               fetchPriority="high"
             />
